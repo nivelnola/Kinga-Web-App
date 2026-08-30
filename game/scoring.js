@@ -47,14 +47,16 @@ function isKinga(card) {
   return card.suit === 'H' && card.rank === 'K';
 }
 
-// tricks: ordered array of { winnerSeat, cards: [card, ...] } for the whole round.
+// tricks: ordered array of { winnerSeat, cards: [card, ...] } taken so far this round.
+// totalTricks: the full round's trick count, used to identify the "last two" tricks;
+// defaults to tricks.length so a completed round can omit it. Passing the round's
+// actual total lets callers score a round that is still in progress.
 // Returns { perSeatPoints: {seat: points}, breakdown: [{trickIndex, winnerSeat, categoryPoints, total}] }
-function scoreRound(roundNumber, playerCount, tricks) {
+function scoreRound(roundNumber, playerCount, tricks, totalTricks = tricks.length) {
   const categories = ROUND_CATEGORIES[roundNumber];
   const costs = costsForRound(roundNumber, playerCount);
   const perSeatPoints = {};
   const breakdown = [];
-  const totalTricks = tricks.length;
 
   tricks.forEach((trick, index) => {
     const isLastTwo = index >= totalTricks - 2;

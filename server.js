@@ -70,6 +70,13 @@ io.on('connection', (socket) => {
     broadcastState();
   });
 
+  socket.on('rename', ({ name }) => {
+    if (!game || mySeat === null) return;
+    const result = game.renameSeat(mySeat, name);
+    if (result.error) socket.emit('error_message', result.error);
+    broadcastState();
+  });
+
   socket.on('discard', ({ cardIds }) => {
     if (!game || mySeat === null) return;
     const result = game.discardCards(mySeat, cardIds);

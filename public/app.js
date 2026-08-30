@@ -3,6 +3,52 @@ const socket = io();
 const SUIT_SYMBOL = { S: '♠', H: '♥', D: '♦', C: '♣' };
 const RED_SUITS = ['H', 'D'];
 
+const ROUND_NAMES = {
+  1: 'All Tricks',
+  2: 'Hearts',
+  3: 'Jacks (Lads)',
+  4: 'Queens (Ladies)',
+  5: 'Last Two Tricks',
+  6: 'King of Hearts (The Kinga)',
+  7: 'Negative Melee',
+  8: 'Positive Melee',
+};
+const TOTAL_ROUNDS = 8;
+
+const ROUND_RULES = {
+  1: 'Standard rules apply. Each trick taken is worth -4 (3p) / -2 (4p) to whoever takes it.',
+  2: 'Hearts cannot be discarded to the stock, and cannot be led unless a player has no other suit. Each Heart taken is worth -5 (3p) / -2 (4p).',
+  3: 'Jacks cannot be discarded to the stock. Each Jack taken is worth -10 (3p) / -4 (4p).',
+  4: 'Queens cannot be discarded to the stock. Each Queen taken is worth -10 (3p) / -4 (4p).',
+  5: 'Standard rules apply. Only the last two tricks of the round score, at -20 (3p) / -8 (4p) each.',
+  6: 'The King of Hearts (the Kinga) cannot be discarded, and must be played if a player can’t follow suit. Hearts cannot be led unless a player has no other suit. Only the Kinga scores, worth -40 (3p) / -16 (4p).',
+  7: 'All categories from Rounds 1-6 apply at once (base values), except the Kinga is not forced. A single trick can score in multiple categories.',
+  8: 'All categories from Rounds 1-6 apply at once, doubled and positive. A single trick can score in multiple categories.',
+};
+
+const RULES_HTML = `
+<section>
+  <h3>Overview</h3>
+  <p>Kinga is a trick-taking game for 3 or 4 players, played over 8 rounds with different scoring contracts. A standard deck trimmed to 7-through-Ace (32 cards) is used.</p>
+</section>
+<section>
+  <h3>Dealing &amp; Play</h3>
+  <p>Each round the dealer deals out the hands. In a 3-player game, two cards are set aside as a stock; the player after the dealer takes the stock into their hand, discards two cards face-down, then leads the first trick. In a 4-player game there is no stock; the player after the dealer leads immediately.</p>
+  <p>The first card played to a trick sets its suit &mdash; everyone else must follow suit if able. The highest card of the led suit wins the trick.</p>
+</section>
+<section>
+  <h3>Rounds</h3>
+  <table>
+    <tr><th>#</th><th>Round</th><th>Rule</th></tr>
+    ${Object.keys(ROUND_NAMES).map((n) => `<tr><td>${n}</td><td>${ROUND_NAMES[n]}</td><td>${ROUND_RULES[n]}</td></tr>`).join('')}
+  </table>
+</section>
+<section>
+  <h3>Scoring</h3>
+  <p>Each round's points are split among the players who took the scoring cards, and the game is zero-sum: Round 8 doubles and flips Round 7's categories to positive. After all 8 rounds, highest total score wins.</p>
+</section>
+`;
+
 const screens = {
   create: document.getElementById('setup-create'),
   seat: document.getElementById('setup-seat'),
@@ -56,6 +102,49 @@ socket.on('state', (view) => {
   }
 });
 
+document.getElementById('rules-modal-body').innerHTML = RULES_HTML;
+document.getElementById('rules-btn').addEventListener('click', () => {
+  document.getElementById('round-rules-popover').classList.add('hidden');
+  document.getElementById('rules-modal').classList.remove('hidden');
+});
+document.getElementById('rules-close-btn').addEventListener('click', () => {
+  document.getElementById('rules-modal').classList.add('hidden');
+});
+document.getElementById('rules-modal').addEventListener('click', (e) => {
+  if (e.target.id === 'rules-modal') document.getElementById('rules-modal').classList.add('hidden');
+});
+
+document.getElementById('round-rules-btn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  document.getElementById('round-rules-popover').classList.toggle('hidden');
+});
+document.addEventListener('click', () => {
+  document.getElementById('round-rules-popover').classList.add('hidden');
+});
+
+let audioCtx = null;
+function playTurnChime() {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const now = audioCtx.currentTime;
+    [880, 1320].forEach((freq, i) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      const start = now + i * 0.12;
+      gain.gain.setValueAtTime(0, start);
+      gain.gain.linearRampToValueAtTime(0.2, start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, start + 0.25);
+      osc.connect(gain).connect(audioCtx.destination);
+      osc.start(start);
+      osc.stop(start + 0.3);
+    });
+  } catch (e) { /* audio unavailable */ }
+}
+
+let renamingOpen = false;
 document.getElementById('create-game-btn').addEventListener('click', () => {
   const name = document.getElementById('create-name').value.trim() || 'Player 1';
   const playerCount = parseInt(document.getElementById('create-player-count').value, 10);
@@ -96,17 +185,27 @@ function renderCardEl(card, { legal, selected, onClick }) {
   return el;
 }
 
+let lastTurnSeat = undefined;
+
 function renderGame(view) {
   document.getElementById('round-info').textContent =
     `Round ${view.roundNumber}/8: ${view.roundName} — trick ${view.tricksTaken + (view.phase === 'trick' ? 1 : 0)}/${view.totalTricks}`;
+  document.getElementById('round-rules-popover').innerHTML =
+    `<h3>Round ${view.roundNumber}: ${view.roundName}</h3><p>${ROUND_RULES[view.roundNumber] || ''}</p>`;
 
   const turnSeat = view.phase === 'discard' ? view.currentLeader : view.currentTurn;
   const turnName = view.seats.find((s) => s.seat === turnSeat)?.name || '';
   document.getElementById('turn-info').textContent =
     turnSeat === view.yourSeat ? "Your turn" : turnSeat !== null ? `Waiting on ${turnName}` : '';
 
+  if (turnSeat === view.yourSeat && lastTurnSeat !== view.yourSeat) {
+    playTurnChime();
+  }
+  lastTurnSeat = turnSeat;
+
   const seatsRow = document.getElementById('seats-row');
   seatsRow.innerHTML = '';
+  renamingOpen = false;
   for (const s of view.seats) {
     const chip = document.createElement('div');
     chip.className = 'seat-chip' +
@@ -114,7 +213,23 @@ function renderGame(view) {
       (s.seat === turnSeat ? ' current-turn' : '');
     const dot = `<span class="dot ${s.connected ? 'connected' : 'disconnected'}"></span>`;
     const dealerTag = s.seat === view.dealerSeat ? ' (dealer)' : '';
-    chip.innerHTML = `${dot}<strong>${s.name || '(empty)'}</strong>${dealerTag}<br/>Cards: ${s.handCount} &nbsp; Tricks: ${s.tricksWon} &nbsp; Score: ${view.scores[s.seat] ?? 0}`;
+    const isYou = s.seat === view.yourSeat;
+    const nameRow = document.createElement('div');
+    nameRow.className = 'seat-name-row';
+    nameRow.innerHTML = `${dot}<strong>${s.name || '(empty)'}</strong>${dealerTag}`;
+    if (isYou) {
+      const editBtn = document.createElement('button');
+      editBtn.className = 'rename-btn';
+      editBtn.title = 'Change your name';
+      editBtn.textContent = '✏️';
+      editBtn.addEventListener('click', () => openRenameForm(chip, s.name));
+      nameRow.appendChild(editBtn);
+    }
+    chip.appendChild(nameRow);
+    const stats = document.createElement('div');
+    stats.innerHTML = `Cards: ${s.handCount} &nbsp; Tricks: ${s.tricksWon}<br/>` +
+      `Round: ${view.roundScores[s.seat] ?? 0} <span class="total-score">(Total: ${view.scores[s.seat] ?? 0})</span>`;
+    chip.appendChild(stats);
     seatsRow.appendChild(chip);
   }
 
@@ -176,13 +291,38 @@ function renderGame(view) {
   renderScoreboard(view);
 }
 
+function openRenameForm(chip, currentName) {
+  if (renamingOpen) return;
+  renamingOpen = true;
+  const form = document.createElement('div');
+  form.className = 'rename-form';
+  form.innerHTML = `<input type="text" maxlength="20" value="${(currentName || '').replace(/"/g, '&quot;')}" />` +
+    `<button type="button">Save</button>`;
+  chip.appendChild(form);
+  const input = form.querySelector('input');
+  input.focus();
+  input.select();
+  const submit = () => {
+    const name = input.value.trim();
+    if (name) socket.emit('rename', { name });
+    form.remove();
+    renamingOpen = false;
+  };
+  form.querySelector('button').addEventListener('click', submit);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') submit();
+    if (e.key === 'Escape') { form.remove(); renamingOpen = false; }
+  });
+}
+
 function renderScoreboard(view) {
   const table = document.getElementById('score-table');
   const names = view.seats.map((s) => s.name || `Seat ${s.seat + 1}`);
   let html = '<tr><th>Round</th>' + names.map((n) => `<th>${n}</th>`).join('') + '</tr>';
-  for (const entry of view.roundHistory) {
-    html += `<tr><td>${entry.roundNumber}. ${entry.roundName}</td>` +
-      view.seats.map((s) => `<td>${entry.perSeatPoints[s.seat] ?? 0}</td>`).join('') + '</tr>';
+  for (let roundNumber = 1; roundNumber <= TOTAL_ROUNDS; roundNumber++) {
+    const entry = view.roundHistory.find((h) => h.roundNumber === roundNumber);
+    html += `<tr><td>${roundNumber}. ${ROUND_NAMES[roundNumber]}</td>` +
+      view.seats.map((s) => `<td>${entry ? (entry.perSeatPoints[s.seat] ?? 0) : '---'}</td>`).join('') + '</tr>';
   }
   html += '<tr><th>Total</th>' + view.seats.map((s) => `<th>${view.scores[s.seat] ?? 0}</th>`).join('') + '</tr>';
   table.innerHTML = html;

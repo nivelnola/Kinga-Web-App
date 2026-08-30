@@ -47,6 +47,15 @@ class GameState {
     if (this.seats[seatIndex]) this.seats[seatIndex].connected = connected;
   }
 
+  renameSeat(seatIndex, name) {
+    const seat = this.seats[seatIndex];
+    if (!seat) return { error: 'Invalid seat.' };
+    const trimmed = (name || '').trim().slice(0, 20);
+    if (!trimmed) return { error: 'Name cannot be empty.' };
+    seat.name = trimmed;
+    return { ok: true };
+  }
+
   startRound() {
     const deck = shuffle(buildDeck());
     this.tricksThisRound = [];
@@ -159,6 +168,9 @@ class GameState {
       ? legalPlays(mySeat.hand, this.ledSuit, this.roundNumber).map((c) => c.id)
       : [];
     const legalDiscard = this.phase === 'discard' && this.currentLeader === seatIndex;
+    const { perSeatPoints: liveRoundPoints } = scoreRound(
+      this.roundNumber, this.playerCount, this.tricksThisRound, this.totalTricks
+    );
 
     return {
       playerCount: this.playerCount,
@@ -184,6 +196,7 @@ class GameState {
         tricksWon: this.tricksThisRound.filter((t) => t.winnerSeat === s.seat).length,
       })),
       scores: this.scores,
+      roundScores: Object.fromEntries(this.seats.map((s) => [s.seat, liveRoundPoints[s.seat] || 0])),
       roundHistory: this.roundHistory,
     };
   }
