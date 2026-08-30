@@ -2,6 +2,8 @@ const socket = io();
 
 const SUIT_SYMBOL = { S: '♠', H: '♥', D: '♦', C: '♣' };
 const RED_SUITS = ['H', 'D'];
+const SUIT_ORDER = { C: 0, D: 1, S: 2, H: 3 };
+const RANK_ORDER = { '7': 0, '8': 1, '9': 2, '10': 3, J: 4, Q: 5, K: 6, A: 7 };
 
 const ROUND_NAMES = {
   1: 'All Tricks',
@@ -301,7 +303,20 @@ function renderGame(view) {
   const hintOn = getHintMode();
   const field = document.getElementById('field');
   field.innerHTML = '';
-  if (view.field.length === 0) {
+  if (view.phase === 'discard' && view.stock && view.stock.length > 0) {
+    const wrap = document.createElement('div');
+    wrap.className = 'stock-display';
+    const label = document.createElement('div');
+    label.textContent = 'Stock';
+    wrap.appendChild(label);
+    const cardsRow = document.createElement('div');
+    cardsRow.className = 'stock-cards';
+    for (const card of view.stock) {
+      cardsRow.appendChild(renderCardEl(card, { dangerous: hintOn && isDangerous(card, view) }));
+    }
+    wrap.appendChild(cardsRow);
+    field.appendChild(wrap);
+  } else if (view.field.length === 0) {
     field.innerHTML = '<em id="field-empty-msg">No cards played yet this trick.</em>';
   } else {
     for (const play of view.field) {
@@ -328,7 +343,8 @@ function renderGame(view) {
 
   const hand = document.getElementById('hand');
   hand.innerHTML = '';
-  const sorted = view.yourHand.slice().sort((a, b) => a.suit.localeCompare(b.suit) || a.rank.localeCompare(b.rank));
+  const sorted = view.yourHand.slice().sort((a, b) =>
+    (SUIT_ORDER[a.suit] - SUIT_ORDER[b.suit]) || (RANK_ORDER[a.rank] - RANK_ORDER[b.rank]));
   for (const card of sorted) {
     let legal;
     let onClick = null;

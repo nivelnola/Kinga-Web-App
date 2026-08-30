@@ -168,11 +168,20 @@ button:disabled { opacity: 0.5; cursor: default; }
 .field-card[data-pos="topleft"] { left: 22%; top: 34%; }
 .field-card[data-pos="topright"] { right: 22%; top: 34%; }
 #field-empty-msg { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); opacity: 0.6; }
+.stock-display {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  font-size: 0.8rem;
+}
+.stock-cards { display: flex; gap: 8px; margin-top: 4px; }
 
 #action-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; min-height: 28px; }
 #status-msg { color: #ffb3b3; }
 
-#hand { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+#hand { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; margin-bottom: 16px; }
 
 .card {
   width: 56px;

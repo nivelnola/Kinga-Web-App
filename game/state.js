@@ -71,7 +71,6 @@ class GameState {
       this.stock = deck.slice(30, 32);
       this.currentLeader = (this.dealerSeat + 1) % this.playerCount;
       this.seats[this.currentLeader].hand.push(...this.stock);
-      this.stock = [];
       this.phase = 'discard';
       this.currentTurn = this.currentLeader;
     } else {
@@ -96,6 +95,7 @@ class GameState {
       }
     }
     this.seats[seat].hand = hand.filter((c) => !cardIds.includes(c.id));
+    this.stock = [];
     this.phase = 'trick';
     this.currentTurn = this.currentLeader;
     return { ok: true };
@@ -224,6 +224,7 @@ class GameState {
       legalCardIds: legal,
       canDiscard: legalDiscard,
       field: this.currentTrickPlays.map((p) => ({ seat: p.seat, card: p.card })),
+      stock: this.phase === 'discard' ? this.stock : [],
       seats: this.seats.map((s) => ({
         seat: s.seat,
         name: s.name,
