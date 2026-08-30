@@ -1,0 +1,100 @@
+* { box-sizing: border-box; }
+body {
+  font-family: system-ui, sans-serif;
+  background: #1e3a2f;
+  color: #f0f0f0;
+  margin: 0;
+  padding: 16px;
+}
+h1 { margin-top: 0; }
+.screen { max-width: 900px; margin: 0 auto; }
+.hidden { display: none !important; }
+
+label { display: block; margin: 10px 0; }
+input, select, button {
+  font-size: 1rem;
+  padding: 6px 10px;
+  margin-top: 4px;
+}
+button {
+  cursor: pointer;
+  background: #d4af37;
+  border: none;
+  border-radius: 4px;
+  font-weight: bold;
+}
+button:disabled { opacity: 0.5; cursor: default; }
+
+#seat-list { display: flex; gap: 10px; flex-wrap: wrap; }
+.seat-option {
+  border: 2px solid #d4af37;
+  border-radius: 6px;
+  padding: 10px 16px;
+  cursor: pointer;
+  background: #2a4a3c;
+}
+.seat-option.taken { opacity: 0.4; cursor: default; border-color: #777; }
+
+#game-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  background: #2a4a3c;
+  padding: 10px 14px;
+  border-radius: 6px;
+}
+
+#seats-row { display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+.seat-chip {
+  background: #2a4a3c;
+  border-radius: 6px;
+  padding: 8px 12px;
+  min-width: 120px;
+}
+.seat-chip.you { border: 2px solid #d4af37; }
+.seat-chip.current-turn { border: 2px solid #6ec1ff; }
+.seat-chip .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+.dot.connected { background: #4caf50; }
+.dot.disconnected { background: #c0392b; }
+
+#field {
+  min-height: 90px;
+  background: #163b2a;
+  border-radius: 8px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 10px;
+  margin-bottom: 12px;
+}
+.field-card { text-align: center; font-size: 0.8rem; }
+
+#action-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; min-height: 28px; }
+#status-msg { color: #ffb3b3; }
+
+#hand { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+
+.card {
+  width: 56px;
+  height: 78px;
+  border-radius: 6px;
+  background: #fff;
+  color: #111;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 1.1rem;
+  cursor: pointer;
+  border: 2px solid transparent;
+  user-select: none;
+}
+.card.red { color: #c0392b; }
+.card.illegal { opacity: 0.35; cursor: not-allowed; }
+.card.selected { border-color: #6ec1ff; }
+
+table { border-collapse: collapse; width: 100%; }
+th, td { border: 1px solid #4a6a5a; padding: 6px 10px; text-align: center; }
+th { background: #2a4a3c; }

@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Kinga</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div id="app">
+
+  <section id="setup-create" class="screen hidden">
+    <h1>Kinga</h1>
+    <p>No game running yet. Start one:</p>
+    <label>Your name <input id="create-name" type="text" maxlength="20" /></label>
+    <label>Players
+      <select id="create-player-count">
+        <option value="3">3 players</option>
+        <option value="4">4 players</option>
+      </select>
+    </label>
+    <button id="create-game-btn">Create Game</button>
+  </section>
+
+  <section id="setup-seat" class="screen hidden">
+    <h1>Kinga</h1>
+    <p>Pick an open seat:</p>
+    <label>Your name <input id="seat-name" type="text" maxlength="20" /></label>
+    <div id="seat-list"></div>
+  </section>
+
+  <section id="game" class="screen hidden">
+    <header id="game-header">
+      <div id="round-info"></div>
+      <div id="turn-info"></div>
+    </header>
+
+    <div id="seats-row"></div>
+
+    <div id="field"></div>
+
+    <div id="action-bar">
+      <span id="status-msg"></span>
+      <button id="discard-submit-btn" class="hidden">Discard Selected (2)</button>
+    </div>
+
+    <div id="hand"></div>
+
+    <details id="scoreboard">
+      <summary>Scoreboard</summary>
+      <table id="score-table"></table>
+    </details>
+  </section>
+
+  <section id="game-over" class="screen hidden">
+    <h1>Game Over</h1>
+    <table id="final-table"></table>
+  </section>
+
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
