@@ -172,6 +172,15 @@ button:disabled { opacity: 0.5; cursor: default; }
 .card.red { color: #c0392b; }
 .card.illegal { opacity: 0.35; cursor: not-allowed; }
 .card.selected { border-color: #6ec1ff; }
+.card.dangerous { box-shadow: 0 0 0 3px #ff6b6b inset; }
+.field-card.winning .card { box-shadow: 0 0 0 3px #d4af37; }
+
+#hint-toggle-label { display: inline-flex; align-items: center; gap: 4px; margin: 0; font-size: 0.9rem; cursor: pointer; }
+#hint-toggle-label input { margin: 0; }
+
+#game-over button#play-again-btn { margin-top: 12px; }
+#game-over button#play-again-btn:disabled { opacity: 0.6; cursor: default; }
+#rematch-status { margin-top: 8px; opacity: 0.8; font-size: 0.9rem; }
 
 table { border-collapse: collapse; width: 100%; }
 th, td { border: 1px solid #4a6a5a; padding: 6px 10px; text-align: center; }

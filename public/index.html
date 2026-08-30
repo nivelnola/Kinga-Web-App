@@ -47,6 +47,7 @@
     <div id="action-bar">
       <span id="status-msg"></span>
       <button id="discard-submit-btn" class="hidden">Discard Selected (2)</button>
+      <label id="hint-toggle-label"><input type="checkbox" id="hint-toggle" /> ⚠️ Hint mode</label>
     </div>
 
     <div id="hand"></div>
@@ -60,6 +61,8 @@
   <section id="game-over" class="screen hidden">
     <h1>Game Over</h1>
     <table id="final-table"></table>
+    <button id="play-again-btn">Play Again</button>
+    <div id="rematch-status"></div>
   </section>
 
   <div id="rules-modal" class="modal-overlay hidden">

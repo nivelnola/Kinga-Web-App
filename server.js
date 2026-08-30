@@ -13,6 +13,7 @@ app.get('/ping', (req, res) => res.status(204).end());
 
 let game = null; // single fixed game for the whole server, created on first "create_game"
 const socketBySeat = new Map(); // seat index -> socket.id
+const TRICK_PAUSE_MS = 1600;
 
 function broadcastState() {
   if (!game) return;
@@ -87,6 +88,20 @@ io.on('connection', (socket) => {
   socket.on('play_card', ({ cardId }) => {
     if (!game || mySeat === null) return;
     const result = game.playCard(mySeat, cardId);
+    if (result.error) socket.emit('error_message', result.error);
+    broadcastState();
+    if (result.trickComplete) {
+      setTimeout(() => {
+        if (!game) return;
+        game.advanceTrick();
+        broadcastState();
+      }, TRICK_PAUSE_MS);
+    }
+  });
+
+  socket.on('play_again', () => {
+    if (!game || mySeat === null) return;
+    const result = game.markReadyForRematch(mySeat);
     if (result.error) socket.emit('error_message', result.error);
     broadcastState();
   });

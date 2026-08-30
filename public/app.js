@@ -144,6 +144,27 @@ function playTurnChime() {
   } catch (e) { /* audio unavailable */ }
 }
 
+function isDangerous(card, view) {
+  const { roundNumber, tricksTaken, totalTricks } = view;
+  if (roundNumber === 2) return card.suit === 'H';
+  if (roundNumber === 3) return card.rank === 'J';
+  if (roundNumber === 4) return card.rank === 'Q';
+  if (roundNumber === 6) return card.suit === 'H' && card.rank === 'K';
+  if (roundNumber === 5) return tricksTaken >= totalTricks - 2;
+  return false; // Rounds 1, 7, 8: too many simultaneous categories to usefully highlight.
+}
+
+function getHintMode() {
+  return localStorage.getItem('kinga_hint_mode') === 'on';
+}
+const hintToggle = document.getElementById('hint-toggle');
+hintToggle.checked = getHintMode();
+hintToggle.addEventListener('change', () => {
+  localStorage.setItem('kinga_hint_mode', hintToggle.checked ? 'on' : 'off');
+  if (lastView) renderGame(lastView);
+});
+
+let lastView = null;
 let renamingOpen = false;
 document.getElementById('create-game-btn').addEventListener('click', () => {
   const name = document.getElementById('create-name').value.trim() || 'Player 1';
@@ -176,10 +197,11 @@ function cardLabel(card) {
   return { rank: card.rank, suit: SUIT_SYMBOL[card.suit], red: RED_SUITS.includes(card.suit) };
 }
 
-function renderCardEl(card, { legal, selected, onClick }) {
+function renderCardEl(card, { legal, selected, onClick, dangerous }) {
   const el = document.createElement('div');
   const label = cardLabel(card);
-  el.className = 'card' + (label.red ? ' red' : '') + (legal === false ? ' illegal' : '') + (selected ? ' selected' : '');
+  el.className = 'card' + (label.red ? ' red' : '') + (legal === false ? ' illegal' : '') +
+    (selected ? ' selected' : '') + (dangerous ? ' dangerous' : '');
   el.innerHTML = `<div>${label.rank}</div><div>${label.suit}</div>`;
   if (onClick) el.addEventListener('click', onClick);
   return el;
@@ -188,6 +210,7 @@ function renderCardEl(card, { legal, selected, onClick }) {
 let lastTurnSeat = undefined;
 
 function renderGame(view) {
+  lastView = view;
   document.getElementById('round-info').textContent =
     `Round ${view.roundNumber}/8: ${view.roundName} — trick ${view.tricksTaken + (view.phase === 'trick' ? 1 : 0)}/${view.totalTricks}`;
   document.getElementById('round-rules-popover').innerHTML =
@@ -195,8 +218,13 @@ function renderGame(view) {
 
   const turnSeat = view.phase === 'discard' ? view.currentLeader : view.currentTurn;
   const turnName = view.seats.find((s) => s.seat === turnSeat)?.name || '';
-  document.getElementById('turn-info').textContent =
-    turnSeat === view.yourSeat ? "Your turn" : turnSeat !== null ? `Waiting on ${turnName}` : '';
+  if (view.phase === 'trick_complete') {
+    const winnerName = view.seats.find((s) => s.seat === view.trickWinnerSeat)?.name || '';
+    document.getElementById('turn-info').textContent = `${winnerName} takes the trick!`;
+  } else {
+    document.getElementById('turn-info').textContent =
+      turnSeat === view.yourSeat ? "Your turn" : turnSeat !== null ? `Waiting on ${turnName}` : '';
+  }
 
   if (turnSeat === view.yourSeat && lastTurnSeat !== view.yourSeat) {
     playTurnChime();
@@ -233,6 +261,7 @@ function renderGame(view) {
     seatsRow.appendChild(chip);
   }
 
+  const hintOn = getHintMode();
   const field = document.getElementById('field');
   field.innerHTML = '';
   if (view.field.length === 0) {
@@ -240,9 +269,9 @@ function renderGame(view) {
   } else {
     for (const play of view.field) {
       const wrap = document.createElement('div');
-      wrap.className = 'field-card';
+      wrap.className = 'field-card' + (play.seat === view.trickWinnerSeat ? ' winning' : '');
       const name = view.seats.find((s) => s.seat === play.seat)?.name || '';
-      wrap.appendChild(renderCardEl(play.card, {}));
+      wrap.appendChild(renderCardEl(play.card, { dangerous: hintOn && isDangerous(play.card, view) }));
       const label = document.createElement('div');
       label.textContent = name;
       wrap.appendChild(label);
@@ -265,6 +294,7 @@ function renderGame(view) {
   for (const card of sorted) {
     let legal;
     let onClick = null;
+    const dangerous = hintOn && isDangerous(card, view);
     if (view.canDiscard) {
       legal = true;
       const isSelected = selectedForDiscard.includes(card.id);
@@ -276,16 +306,18 @@ function renderGame(view) {
         }
         renderGame(view);
       };
-      hand.appendChild(renderCardEl(card, { legal, selected: isSelected, onClick }));
+      hand.appendChild(renderCardEl(card, { legal, selected: isSelected, onClick, dangerous }));
       continue;
     }
     if (view.phase === 'trick' && view.currentTurn === view.yourSeat) {
       legal = view.legalCardIds.includes(card.id);
       if (legal) onClick = () => socket.emit('play_card', { cardId: card.id });
+    } else if (view.phase === 'trick_complete') {
+      legal = false;
     } else {
       legal = undefined;
     }
-    hand.appendChild(renderCardEl(card, { legal, onClick }));
+    hand.appendChild(renderCardEl(card, { legal, onClick, dangerous }));
   }
 
   renderScoreboard(view);
@@ -338,7 +370,21 @@ function renderGameOver(view) {
     html += `<tr><td>${i + 1}</td><td>${r.name}</td><td>${r.score}</td></tr>`;
   });
   table.innerHTML = html;
+
+  const youReady = view.rematchReady.includes(view.yourSeat);
+  const playAgainBtn = document.getElementById('play-again-btn');
+  playAgainBtn.disabled = youReady;
+  playAgainBtn.textContent = youReady ? 'Waiting on others…' : 'Play Again';
+
+  const readyNames = view.rematchReady
+    .map((seat) => view.seats.find((s) => s.seat === seat)?.name || `Seat ${seat + 1}`);
+  document.getElementById('rematch-status').textContent =
+    readyNames.length > 0 ? `Ready: ${readyNames.join(', ')}` : '';
 }
+
+document.getElementById('play-again-btn').addEventListener('click', () => {
+  socket.emit('play_again');
+});
 
 document.getElementById('discard-submit-btn').addEventListener('click', () => {
   if (selectedForDiscard.length === 2) {

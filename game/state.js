@@ -21,6 +21,8 @@ class GameState {
     this.stock = [];
     this.scores = Object.fromEntries(Array.from({ length: playerCount }, (_, s) => [s, 0]));
     this.roundHistory = [];
+    this.lastTrickWinner = null;
+    this.rematchReady = new Set();
   }
 
   openSeats() {
@@ -118,22 +120,33 @@ class GameState {
       return { ok: true };
     }
 
-    // Trick complete.
+    // Trick complete. Leave the played cards on the field and pause here;
+    // server.js schedules advanceTrick() after a short delay so every client
+    // gets to see who won before the field clears.
     const winnerSeat = trickWinner(this.currentTrickPlays, this.ledSuit);
     this.tricksThisRound.push({
       winnerSeat,
       cards: this.currentTrickPlays.map((p) => p.card),
     });
+    this.lastTrickWinner = winnerSeat;
+    this.phase = 'trick_complete';
+    this.currentTurn = null;
+    return { ok: true, trickComplete: true };
+  }
+
+  advanceTrick() {
+    const winnerSeat = this.lastTrickWinner;
     this.currentTrickPlays = [];
     this.ledSuit = null;
+    this.lastTrickWinner = null;
 
     if (this.tricksThisRound.length === this.totalTricks) {
       this.finishRound();
     } else {
       this.currentLeader = winnerSeat;
       this.currentTurn = winnerSeat;
+      this.phase = 'trick';
     }
-    return { ok: true };
   }
 
   finishRound() {
@@ -152,10 +165,32 @@ class GameState {
       this.phase = 'game_over';
       this.currentTurn = null;
       this.currentLeader = null;
+      this.rematchReady = new Set();
       return;
     }
 
     this.roundNumber += 1;
+    this.dealerSeat = (this.dealerSeat + 1) % this.playerCount;
+    this.startRound();
+  }
+
+  markReadyForRematch(seatIndex) {
+    if (this.phase !== 'game_over') return { error: 'Game is not over.' };
+    this.rematchReady.add(seatIndex);
+    if (this.rematchReady.size === this.playerCount) this.resetForRematch();
+    return { ok: true };
+  }
+
+  resetForRematch() {
+    this.roundNumber = 1;
+    this.scores = Object.fromEntries(this.seats.map((s) => [s.seat, 0]));
+    this.roundHistory = [];
+    this.tricksThisRound = [];
+    this.currentTrickPlays = [];
+    this.lastTrickWinner = null;
+    this.ledSuit = null;
+    this.stock = [];
+    this.rematchReady = new Set();
     this.dealerSeat = (this.dealerSeat + 1) % this.playerCount;
     this.startRound();
   }
@@ -198,6 +233,8 @@ class GameState {
       scores: this.scores,
       roundScores: Object.fromEntries(this.seats.map((s) => [s.seat, liveRoundPoints[s.seat] || 0])),
       roundHistory: this.roundHistory,
+      trickWinnerSeat: this.phase === 'trick_complete' ? this.lastTrickWinner : null,
+      rematchReady: Array.from(this.rematchReady),
     };
   }
 }
