@@ -211,6 +211,31 @@ let lastTurnSeat = undefined;
 
 function renderGame(view) {
   lastView = view;
+
+  if (view.phase === 'seating') {
+    const joined = view.seats.filter((s) => s.name).length;
+    document.getElementById('round-info').textContent =
+      `Waiting for players (${joined}/${view.playerCount} seated)…`;
+    document.getElementById('round-rules-popover').innerHTML = '';
+    document.getElementById('turn-info').textContent = '';
+
+    const seatsRow = document.getElementById('seats-row');
+    seatsRow.innerHTML = '';
+    for (const s of view.seats) {
+      const chip = document.createElement('div');
+      chip.className = 'seat-chip' + (s.seat === view.yourSeat ? ' you' : '');
+      const dot = `<span class="dot ${s.connected ? 'connected' : 'disconnected'}"></span>`;
+      chip.innerHTML = `${dot}<strong>${s.name || '(open seat)'}</strong>`;
+      seatsRow.appendChild(chip);
+    }
+
+    document.getElementById('field').innerHTML = '<em>Waiting for all seats to be filled before dealing…</em>';
+    document.getElementById('discard-submit-btn').classList.add('hidden');
+    document.getElementById('hand').innerHTML = '';
+    renderScoreboard(view);
+    return;
+  }
+
   document.getElementById('round-info').textContent =
     `Round ${view.roundNumber}/8: ${view.roundName} — trick ${view.tricksTaken + (view.phase === 'trick' ? 1 : 0)}/${view.totalTricks}`;
   document.getElementById('round-rules-popover').innerHTML =
