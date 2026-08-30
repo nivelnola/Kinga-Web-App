@@ -42,6 +42,7 @@ class GameState {
   }
 
   findSeatByToken(token) {
+    if (!token) return null;
     return this.seats.find((s) => s.token === token) || null;
   }
 
