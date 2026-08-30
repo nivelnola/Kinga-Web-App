@@ -207,6 +207,16 @@ function renderCardEl(card, { legal, selected, onClick, dangerous }) {
   return el;
 }
 
+const POS_BY_OFFSET = {
+  3: ['bottom', 'topleft', 'topright'],
+  4: ['bottom', 'left', 'top', 'right'],
+};
+function seatPosition(seat, yourSeat, playerCount) {
+  const offsets = POS_BY_OFFSET[playerCount] || POS_BY_OFFSET[4];
+  const offset = (seat - yourSeat + playerCount) % playerCount;
+  return offsets[offset];
+}
+
 let lastTurnSeat = undefined;
 
 function renderGame(view) {
@@ -224,12 +234,13 @@ function renderGame(view) {
     for (const s of view.seats) {
       const chip = document.createElement('div');
       chip.className = 'seat-chip' + (s.seat === view.yourSeat ? ' you' : '');
+      chip.dataset.pos = seatPosition(s.seat, view.yourSeat, view.playerCount);
       const dot = `<span class="dot ${s.connected ? 'connected' : 'disconnected'}"></span>`;
       chip.innerHTML = `${dot}<strong>${s.name || '(open seat)'}</strong>`;
       seatsRow.appendChild(chip);
     }
 
-    document.getElementById('field').innerHTML = '<em>Waiting for all seats to be filled before dealing…</em>';
+    document.getElementById('field').innerHTML = '<em id="field-empty-msg">Waiting for all seats to be filled before dealing…</em>';
     document.getElementById('discard-submit-btn').classList.add('hidden');
     document.getElementById('hand').innerHTML = '';
     renderScoreboard(view);
@@ -264,6 +275,7 @@ function renderGame(view) {
     chip.className = 'seat-chip' +
       (s.seat === view.yourSeat ? ' you' : '') +
       (s.seat === turnSeat ? ' current-turn' : '');
+    chip.dataset.pos = seatPosition(s.seat, view.yourSeat, view.playerCount || view.seats.length);
     const dot = `<span class="dot ${s.connected ? 'connected' : 'disconnected'}"></span>`;
     const dealerTag = s.seat === view.dealerSeat ? ' (dealer)' : '';
     const isYou = s.seat === view.yourSeat;
@@ -290,11 +302,12 @@ function renderGame(view) {
   const field = document.getElementById('field');
   field.innerHTML = '';
   if (view.field.length === 0) {
-    field.innerHTML = '<em>No cards played yet this trick.</em>';
+    field.innerHTML = '<em id="field-empty-msg">No cards played yet this trick.</em>';
   } else {
     for (const play of view.field) {
       const wrap = document.createElement('div');
       wrap.className = 'field-card' + (play.seat === view.trickWinnerSeat ? ' winning' : '');
+      wrap.dataset.pos = seatPosition(play.seat, view.yourSeat, view.playerCount || view.seats.length);
       const name = view.seats.find((s) => s.seat === play.seat)?.name || '';
       wrap.appendChild(renderCardEl(play.card, { dangerous: hintOn && isDangerous(play.card, view) }));
       const label = document.createElement('div');

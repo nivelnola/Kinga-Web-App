@@ -45,15 +45,39 @@ button:disabled { opacity: 0.5; cursor: default; }
   border-radius: 6px;
 }
 
-#seats-row { display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+#table {
+  position: relative;
+  width: 100%;
+  max-width: 640px;
+  aspect-ratio: 5 / 4;
+  margin: 0 auto 12px;
+  background: #163b2a;
+  border-radius: 12px;
+}
+@media (max-width: 480px) {
+  #table { aspect-ratio: 3 / 4; }
+  .seat-chip { min-width: 90px; padding: 6px 8px; font-size: 0.85rem; }
+}
+#seats-row, #field { position: absolute; inset: 0; pointer-events: none; }
+
 .seat-chip {
+  position: absolute;
   background: #2a4a3c;
   border-radius: 6px;
   padding: 8px 12px;
-  min-width: 120px;
+  min-width: 110px;
+  max-width: 42%;
+  pointer-events: auto;
 }
 .seat-chip.you { border: 2px solid #d4af37; }
 .seat-chip.current-turn { border: 2px solid #6ec1ff; }
+
+.seat-chip[data-pos="bottom"] { left: 50%; bottom: 0; transform: translateX(-50%); text-align: center; }
+.seat-chip[data-pos="top"] { left: 50%; top: 0; transform: translateX(-50%); text-align: center; }
+.seat-chip[data-pos="left"] { left: 0; top: 50%; transform: translateY(-50%); }
+.seat-chip[data-pos="right"] { right: 0; top: 50%; transform: translateY(-50%); }
+.seat-chip[data-pos="topleft"] { left: 4%; top: 4%; }
+.seat-chip[data-pos="topright"] { right: 4%; top: 4%; }
 .seat-chip .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
 .dot.connected { background: #4caf50; }
 .dot.disconnected { background: #c0392b; }
@@ -136,17 +160,14 @@ button:disabled { opacity: 0.5; cursor: default; }
 .modal-body table { margin-bottom: 12px; }
 .modal-body section { margin-bottom: 18px; }
 
-#field {
-  min-height: 90px;
-  background: #163b2a;
-  border-radius: 8px;
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  padding: 10px;
-  margin-bottom: 12px;
-}
-.field-card { text-align: center; font-size: 0.8rem; }
+.field-card { position: absolute; text-align: center; font-size: 0.8rem; pointer-events: none; }
+.field-card[data-pos="bottom"] { left: 50%; bottom: 22%; transform: translateX(-50%); }
+.field-card[data-pos="top"] { left: 50%; top: 22%; transform: translateX(-50%); }
+.field-card[data-pos="left"] { left: 24%; top: 50%; transform: translateY(-50%); }
+.field-card[data-pos="right"] { right: 24%; top: 50%; transform: translateY(-50%); }
+.field-card[data-pos="topleft"] { left: 22%; top: 34%; }
+.field-card[data-pos="topright"] { right: 22%; top: 34%; }
+#field-empty-msg { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); opacity: 0.6; }
 
 #action-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; min-height: 28px; }
 #status-msg { color: #ffb3b3; }
